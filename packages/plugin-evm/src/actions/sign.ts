@@ -20,7 +20,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 
 
-import { keygen } from "./keygen";
+import { generateCryptographicKey } from "./keygen";
 export { signTemplate };
 
 export class SignAction {
@@ -33,11 +33,11 @@ export class SignAction {
         // Assume this will be imported and implemented elsewhere.
 
 
-        const {sdk1, keyId} = await keygen()
+        const {ephemeralAuthSigner, keyId} = await generateCryptographicKey()
 
         let signReq = new SignRequestBuilder().setRequest(uuidv4(), messageToSign, "rawBytes").build()
 
-        let resp = await sdk1.signMessage(keyId, "secp256k1", signReq);
+        let resp = await ephemeralAuthSigner.signMessage(keyId, "secp256k1", signReq);
         console.log("resp", resp);
 
         return resp[0].sign

@@ -36,6 +36,10 @@
             "outputs": ["dist/**"],
             "dependsOn": ["@elizaos/plugin-tee#build"]
         },
+        "@elizaos/plugin-sl#build": {
+            "outputs": ["dist/**"],
+            "dependsOn": ["@elizaos/plugin-tee#build"]
+        },
         "@elizaos/plugin-tee-log#build": {
             "outputs": ["dist/**"],
             "dependsOn": [

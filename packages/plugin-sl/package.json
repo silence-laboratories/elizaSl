@@ -1,5 +1,5 @@
 {
-    "name": "@elizaos/plugin-evm",
+    "name": "@elizaos/plugin-sl",
     "version": "0.1.8+build.1",
     "type": "module",
     "main": "dist/index.js",
@@ -25,6 +25,7 @@
         "@lifi/data-types": "5.15.5",
         "@lifi/sdk": "3.4.1",
         "@lifi/types": "16.3.0",
+        "@silencelaboratories/walletprovider-sdk": "file:/Users/yogendrasankhla/Desktop/walletprovider-sdk/",
         "pnpm": "9.14.4",
         "tsup": "8.3.5"
     },

@@ -224,8 +224,6 @@ export class TransferAction {
             //     data: params.data as Hex,
             //   };
 
-            //eph key
-            //sign,permissions,revoke session key
 
             let signReq = new SignRequestBuilder().setRequest(uuidv4(), "0x123456", "rawBytes").build()
 

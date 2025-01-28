@@ -6,6 +6,7 @@ import {
     ModelClass,
 } from "@elizaos/core";
 import { keygenTemplate } from "../templates";
+import * as viem from "viem";
 import {
     WalletProviderServiceClient,
     EOAAuth,
@@ -19,24 +20,34 @@ import {
 } from "@silencelaboratories/walletprovider-sdk";
 import { v4 as uuidv4 } from "uuid";
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { bytesToHex } from "viem";
+import { bytesToHex, Hex } from "viem";
 import { MockBrowserWallet } from "./wallet";
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from "url";
+import { privateKeyToAccount } from "viem/accounts";
 
 export { keygenTemplate };
 
 // Configuration Manager
-class KeyConfigManager {
-    public static readonly CONFIG_FILE = path.join(__dirname, 'wallet-config.json');
+export class KeyConfigManager {
+    private static readonly configPath = path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        'wallet-config.json'
+    );
+
+    // Add public accessor for config path
+    static get configFilePath(): string {
+        return this.configPath;
+    }
 
     static saveConfig(config: KeyConfiguration) {
-        fs.writeFileSync(this.CONFIG_FILE, JSON.stringify(config, null, 2));
+        fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2));
     }
 
     static loadConfig(): KeyConfiguration | null {
         try {
-            const data = fs.readFileSync(this.CONFIG_FILE, 'utf-8');
+            const data = fs.readFileSync(this.configPath, 'utf-8');
             return JSON.parse(data);
         } catch (error) {
             return null;
@@ -44,7 +55,7 @@ class KeyConfigManager {
     }
 }
 
-interface KeyConfiguration {
+export interface KeyConfiguration {
     publicKey: string;
     keyId: string;
     ephemeralKeyId: string;
@@ -52,23 +63,18 @@ interface KeyConfiguration {
     signerAddress: string;
     t: number;
     n: number;
+    sesssionAddress:string;
 }
 
 export async function generateCryptographicKey() {
     // Configuration
-    const mockSignerPrivateKey = "f6f7f41b5bdb92484edc920e66784a4a7ab3794dc1938b68eab6a90c05c03eae";
-    const signerAddress = "0xd3D373a3cBC50021745ce30109b090E18d1ced0D";
-    const n = 2;
-    const t = 3;
-
-    // Initialize mock wallet
+    const mockSignerPrivateKey = process.env.MOCK_SIGNER_PRIVATEKEY;
+    const n = 3;
+    const t = 2;
     const mockWallet = new MockBrowserWallet(mockSignerPrivateKey);
-
-    // Generate signer public keys
     const signerPublicKeyBytes = secp256k1.getPublicKey(Buffer.from(mockSignerPrivateKey, "hex"));
     const signerPublicKeyHex = bytesToHex(signerPublicKeyBytes);
-
-    // Generate ephemeral keys
+    const signerAddress = computeAddress(signerPublicKeyHex);
     const ephemeralPrivateKey = generateEphPrivateKey("secp256k1");
     const ephemeralPublicKey = getEphPublicKey(ephemeralPrivateKey, "secp256k1");
     const ephemeralKeyId = uuidv4();
@@ -82,9 +88,10 @@ export async function generateCryptographicKey() {
     );
 
     const eoaAuthModule = new EOAAuth(signerAddress, mockWallet, { ephClaim: ephemeralKeyClaim });
+
     const walletProviderClient = new WalletProviderServiceClient({
         walletProviderId: "myWalletProvider",
-        walletProviderUrl: "ws://localhost:8090",
+        walletProviderUrl: process.env.WALLET_PROVIDER_URL ,
         apiVersion: "v2",
     });
 
@@ -111,10 +118,12 @@ export async function generateCryptographicKey() {
         publicKey: primaryKey.publicKey,
         keyId: primaryKey.keyId,
         ephemeralKeyId,
-        ephemeralPrivateKey: bytesToHex(ephemeralPrivateKey),
+        ephemeralPrivateKey: Buffer.from(ephemeralPrivateKey).toString('hex'),
         signerAddress,
         t: t,
-        n: n
+        n: n,
+        sesssionAddress: computeAddress(primaryKey.publicKey)
+
     };
 
     KeyConfigManager.saveConfig(keyConfig);
@@ -177,19 +186,33 @@ export const keygenAction = {
 
         const keyService = new KeyGenerationService();
         try {
-            const publicKey = await keyService.generateNewKeyPair();
+            const { publicKey, keyId } = await generateCryptographicKey();
+
+            // Get config for additional details
+            const config = KeyConfigManager.loadConfig();
+
+            const responseText =
+                `Dobby has forged a new cryptographic key!\n` +
+                `✨ Public Key: ${publicKey}\n` +
+                `🔑 Key ID: ${keyId}\n` +
+                `📁 Config: ${config}`;
+
             callback?.({
-                text: `Successfully generated cryptographic keys`,
+                text: responseText,
                 content: {
                     success: true,
                     publicKey,
-                    configLocation: KeyConfigManager.CONFIG_FILE
+                    keyId,
+                    ephemeralKeyId: config?.ephemeralKeyId,
+                    configLocation: KeyConfigManager.configFilePath
                 },
             });
             return true;
         } catch (error) {
             console.error("Key generation failed:", error.message);
-            callback?.({ text: `Key generation error: ${error.message}` });
+            callback?.({
+                text: `Key generation failed! Dobby is sorry... (${error.message})`
+            });
             return false;
         }
     },

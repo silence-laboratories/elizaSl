@@ -29,15 +29,11 @@ WALLET_PROVIDER_URL = "Wallet provider URL",
 ```
 - note: contact SL team to get the wallet provider URL
 
+### Architecture and Interaction Flow
+The following sequence diagram illustrates the interaction between Eliza OS, Silence Labs SDK, Eliza OS Plugin, and Silence Labs Backend.
 
+![alt text](image.png)
 
-## Provider
-
-The **Wallet Provider** initializes with the **first chain in the list** as the default (or Ethereum mainnet if none are added). It:
-
-- Provides the **context** of the currently connected address and its balance.
-- Creates **Public** and **Wallet clients** to interact with the supported chains.
-- Allows adding chains dynamically at runtime.
 
 ## Actions
 

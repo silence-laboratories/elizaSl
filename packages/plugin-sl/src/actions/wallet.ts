@@ -1,4 +1,4 @@
-import { TypedData, IBrowserWallet } from '@silencelaboratories/walletprovider-sdk';
+import { TypedData, IBrowserWallet } from '../sdk';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { hashTypedData, hexToBytes, serializeSignature } from 'viem';
 import { toHex } from 'viem/utils';

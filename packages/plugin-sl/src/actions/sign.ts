@@ -10,8 +10,9 @@ import {
     WalletProviderServiceClient,
     EphAuth,
     NetworkSigner,
-} from "@silencelaboratories/walletprovider-sdk";
-import { SignRequestBuilder } from "@silencelaboratories/walletprovider-sdk"
+    SignRequestBuilder
+} from "../sdk";
+
 import { v4 as uuidv4 } from "uuid";
 import { KeyConfigManager } from "./keygen";
 import { Buffer } from 'buffer';

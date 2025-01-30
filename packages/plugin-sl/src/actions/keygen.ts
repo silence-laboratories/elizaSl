@@ -15,7 +15,7 @@ import {
     NetworkSigner,
     EphAuth,
     computeAddress,
-} from "@silencelaboratories/walletprovider-sdk";
+} from "../sdk";
 import { v4 as uuidv4 } from "uuid";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { bytesToHex, Hex } from "viem";

@@ -3,7 +3,6 @@ import { secp256k1 } from '@noble/curves/secp256k1';
 import { hashTypedData, hexToBytes, serializeSignature } from 'viem';
 import { toHex } from 'viem/utils';
 
-// EXACT signature from IBrowserWallet, no extra constraints
 export class MockBrowserWallet implements IBrowserWallet {
   private privateKey: Uint8Array;
 

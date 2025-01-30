@@ -6,7 +6,6 @@ import {
     ModelClass,
 } from "@elizaos/core";
 import { keygenTemplate } from "../templates";
-import * as viem from "viem";
 import {
     WalletProviderServiceClient,
     EOAAuth,
@@ -14,7 +13,6 @@ import {
     generateEphPrivateKey,
     getEphPublicKey,
     NetworkSigner,
-    SignRequestBuilder,
     EphAuth,
     computeAddress,
 } from "@silencelaboratories/walletprovider-sdk";

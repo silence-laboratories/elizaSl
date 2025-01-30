@@ -20,12 +20,10 @@
     ],
     "dependencies": {
         "@elizaos/core": "workspace:*",
-        "@elizaos/plugin-evm": "^0.1.8",
         "@elizaos/plugin-tee": "workspace:*",
         "@lifi/data-types": "5.15.5",
         "@lifi/sdk": "3.4.1",
         "@lifi/types": "16.3.0",
-        "pnpm": "9.14.4",
         "tsup": "8.3.5"
     },
     "scripts": {

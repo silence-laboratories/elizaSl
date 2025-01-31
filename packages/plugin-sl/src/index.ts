@@ -10,9 +10,10 @@ import { signAction } from "./actions/sign";
 export const slPlugin: Plugin = {
     name: "sl",
     description: "Silence Laboratories: Silent Network plugin for Eliza",
+    providers:[],
     evaluators: [],
     services: [],
-    actions: [ signAction, keygenAction],
+    actions: [ keygenAction,signAction],
 };
 
 export default slPlugin;

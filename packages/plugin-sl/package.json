@@ -21,7 +21,7 @@
     "dependencies": {
         "@elizaos/core": "workspace:*",
         "@elizaos/plugin-tee": "workspace:*",
-        "@silencelaboratories/walletprovider-sdk": "1.3.0",
+        "@silencelaboratories/walletprovider-sdk": "file:/Users/yogendrasankhla/Desktop/walletprovider-sdk/",
         "pnpm": "9.14.4",
         "tsup": "8.3.5"
     },

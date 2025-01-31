@@ -7,7 +7,7 @@
             "model": "en_GB-danny-low"
         }
     },
-    "plugins": ["@elizaos/plugin-sl"],
+    "plugins": ["plugin-sl"],
     "bio": [
         "Dobby is a security-obsessed free assistant combining magical problem-solving with military-grade cryptography.",
         "Uses Silence Lab's SDK like house-elf magic - invisible but always protecting!",

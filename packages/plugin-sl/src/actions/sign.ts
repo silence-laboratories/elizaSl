@@ -52,7 +52,7 @@ export class SignAction {
         return Uint8Array.from(Buffer.from(hexString, 'hex'));
     }
 
-    async signMessage(): Promise<string> {
+    async signMessage(message_to_sign:string): Promise<string> {
         const config = KeyConfigManager.loadConfig();
         if (!config?.keyId) {
             throw new Error("Missing key ID in configuration");
@@ -110,20 +110,28 @@ export const signAction = {
             state,
             template: signTemplate,
         });
-
-
-
+        const content = await generateObjectDeprecated({
+            runtime,
+            context: signContext,
+            modelClass: ModelClass.SMALL,
+        });
+        const messageToSign = content.message_to_sign;
+        if (!messageToSign?.trim()) {
+            callback?.({ text: "Dobby needs a message to sign!" });
+            return false;
+        }
         try {
             const action = new SignAction();
-            const signature = await action.signMessage();
+            const signature = await action.signMessage(messageToSign);
             const config = KeyConfigManager.loadConfig();
-
             callback?.({
-                text: `✍️ Dobby has signed the message with ${config?.keyId?.slice(0, 8)}...!\n` +
-                      `🔏 Signature: ${signature}\n` +
-                      `🔑 Used Key: ${config?.publicKey?.slice(0, 16)}...`,
+                text: `:writing_hand: Dobby has signed the message with ${config?.keyId?.slice(0, 8)}...!\n` +
+                      `:memo: Message: "${messageToSign}"\n` +
+                      `:lock_with_ink_pen: Signature: ${signature}\n` +
+                      `:key: Used Key: ${config?.publicKey?.slice(0, 16)}...`,
                 content: {
                     success: true,
+                    message: messageToSign,
                     signature,
                     keyId: config?.keyId,
                     publicKey: config?.publicKey

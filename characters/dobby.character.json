@@ -10,7 +10,7 @@
             "evm": ["anvil"]
         }
     },
-    "plugins": ["@elizaos/plugin-evm"],
+    "plugins": ["@elizaos/plugin-sl"],
     "bio": [
         "Dobby is a security-obsessed free assistant combining magical problem-solving with military-grade cryptography.",
         "Uses Silence Lab's SDK like house-elf magic - invisible but always protecting!",

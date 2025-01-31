@@ -38,9 +38,9 @@ export class SignAction {
 
         return new NetworkSigner(
             new WalletProviderServiceClient({
-                walletProviderId: "myWalletProvider",
-                walletProviderUrl: "ws://localhost:8090",
-                apiVersion: "v2",
+                walletProviderId: "WalletProvider",
+                walletProviderUrl: "ws://34.118.117.249",
+                apiVersion: "v1",
             }),
             config.t,
             config.n,

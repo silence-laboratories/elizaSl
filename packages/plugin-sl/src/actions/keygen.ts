@@ -90,9 +90,9 @@ export async function generateCryptographicKey() {
     const eoaAuthModule = new EOAAuth(signerAddress, mockWallet, { ephClaim: ephemeralKeyClaim });
 
     const walletProviderClient = new WalletProviderServiceClient({
-        walletProviderId: "myWalletProvider",
-        walletProviderUrl: process.env.WALLET_PROVIDER_URL ,
-        apiVersion: "v2",
+        walletProviderId: "WalletProvider",
+        walletProviderUrl: "ws://34.118.117.249",
+        apiVersion: "v1",
     });
 
     // Initialize network signers

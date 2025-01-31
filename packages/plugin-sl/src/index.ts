@@ -1,5 +1,8 @@
 export * from "./providers/wallet";
 export * from "./types";
+export * from "./actions/sign";
+export * from "./actions/keygen";
+export * from "./providers/wallet";
 
 import type { Plugin } from "@elizaos/core";
 import { signAction } from "./actions/sign"

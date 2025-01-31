@@ -4,30 +4,17 @@ This Eliza OS plugin enables seamless interaction with Silence Labs' Wallet Prov
 
 
 ## Features
-
+- Create random private key
 - Key Generation: Uses WalletProviderServiceClient for distributed key generation.
 - MockWallet Support: Mimics an EOA for authentication without requiring MetaMask.
 - Ephemeral Key Handling: Generates and manages ephemeral keys for secure signing.
-- Integration with Eliza OS: Works as an Eliza OS action, enabling automated workflows.
+- Integration with Eliza OS: Works as an Eliza OS plugin, enabling automated workflows.
 
-
-## Installation
-
-```bash
-pnpm install @elizaos/plugin-sl
-```
 
 ## Configuration
 
 ### Required Environment Variables
-
-```env
-# Required
-MOCK_SIGNER_PRIVATEKEY = "your private key"
-WALLET_PROVIDER_URL = "Wallet provider URL",
-
-```
-- note: contact SL team to get the wallet provider URL
+- use Any AI api key
 
 ### Architecture and Interaction Flow
 The following sequence diagram illustrates the interaction between Eliza OS, Silence Labs SDK, Eliza OS Plugin, and Silence Labs Backend.
@@ -58,6 +45,9 @@ sign 0x1234567890abcdef
 
 1. Clone the repository
 2. Install dependencies:
+
+note: use nvm 23.3.0
+
 
 ```bash
 pnpm install

@@ -23,7 +23,7 @@ import { MockBrowserWallet } from "./wallet";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
-import { privateKeyToAccount } from "viem/accounts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 export { keygenTemplate };
 
@@ -65,8 +65,9 @@ export interface KeyConfiguration {
 }
 
 export async function generateCryptographicKey() {
-    // Configuration
-    const mockSignerPrivateKey = process.env.MOCK_SIGNER_PRIVATEKEY;
+    const privatekey = generatePrivateKey();
+    console.log("privatekey",privatekey)
+    const mockSignerPrivateKey = privatekey.slice(2);
     const n = 3;
     const t = 2;
     const mockWallet = new MockBrowserWallet(mockSignerPrivateKey);
@@ -77,7 +78,7 @@ export async function generateCryptographicKey() {
     const ephemeralPublicKey = getEphPublicKey(ephemeralPrivateKey, "secp256k1");
     const ephemeralKeyId = uuidv4();
 
-    // Create authentication modules
+    // Create authentication modules - UPDATED AUTH CONFIGURATION
     const ephemeralKeyClaim = new EphKeyClaim(
         ephemeralKeyId,
         ephemeralPublicKey,
@@ -85,12 +86,17 @@ export async function generateCryptographicKey() {
         60 * 60 // 1 hour lifetime
     );
 
-    const eoaAuthModule = new EOAAuth(signerAddress, mockWallet, { ephClaim: ephemeralKeyClaim });
+    // Changed EOAAuth instantiation
+    const eoaAuthModule = new EOAAuth(
+        signerAddress,
+        mockWallet,
+        ephemeralKeyClaim // Directly pass the claim instead of wrapping in object
+    );
 
     const walletProviderClient = new WalletProviderServiceClient({
-        walletProviderId: "myWalletProvider",
-        walletProviderUrl: process.env.WALLET_PROVIDER_URL ,
-        apiVersion: "v2",
+        walletProviderId: "WalletProvider",
+        walletProviderUrl: "ws://34.118.117.249",
+        apiVersion: "v1",
     });
 
     // Initialize network signers
@@ -101,16 +107,20 @@ export async function generateCryptographicKey() {
         eoaAuthModule
     );
 
-    const keyGenerationResponse = await eoaNetworkSigner.generateKey(["secp256k1"]);
-    const [primaryKey] = keyGenerationResponse;
+    // Update permissions format to match new SDK requirements
+    // const permissions = JSON.stringify({
+    //     permissions: [
+    //         {
+    //             type: "generic",
+    //             methods: ["signMessage", "verifySignature"]
+    //         }
+    //     ]
+    // });
 
-    // Create ephemeral auth module
-    const ephemeralAuthModule = new EphAuth(
-        ephemeralKeyId,
-        ephemeralPrivateKey,
-        "secp256k1"
-    );
+    const keyGenerationResponse = await eoaNetworkSigner.generateKey(); // Updated parameter
+    const primaryKey = keyGenerationResponse;
 
+    // Rest of the code remains the same...
     // Save configuration
     const keyConfig: KeyConfiguration = {
         publicKey: primaryKey.publicKey,
@@ -121,7 +131,6 @@ export async function generateCryptographicKey() {
         t: t,
         n: n,
         sesssionAddress: computeAddress(primaryKey.publicKey)
-
     };
 
     KeyConfigManager.saveConfig(keyConfig);
@@ -134,9 +143,14 @@ export async function generateCryptographicKey() {
             walletProviderClient,
             t,
             n,
-            ephemeralAuthModule
+            new EphAuth(
+                ephemeralKeyId,
+                ephemeralPrivateKey,
+                "secp256k1"
+            )
         )
     };
+
 }
 
 export class KeyGenerationService {
@@ -176,12 +190,7 @@ export const keygenAction = {
             context: keygenContext,
             modelClass: ModelClass.SMALL,
         });
-
-        if (!content.keygen) {
-            callback?.({ text: "Invalid key generation request format" });
-            return false;
-        }
-
+        const keygeneration = content.KeyGenerationService
         const keyService = new KeyGenerationService();
         try {
             const { publicKey, keyId } = await generateCryptographicKey();
@@ -218,12 +227,14 @@ export const keygenAction = {
     validate: async (_runtime: IAgentRuntime) => true,
     examples: [
         [{
-            user: "user",
-            content: {
-                text: "Generate new cryptographic keys",
-                action: "GENERATE_KEYS",
-            },
+          user: "user",
+          content: {
+            text: "Generate new cryptographic keys",
+            action: "KEYGEN_ACTION",
+          },
         }],
-    ],
-    similes: ["GENERATE_KEYS", "CREATE_KEY_PAIR", "INITIALIZE_CRYPTO"],
+      ],
+
+    similes: ["GENERATE_KEYS", "CREATE_KEY_PAIR", "INITIALIZE_CRYPTO", "start keygen"],
+
 };

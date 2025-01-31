@@ -5,9 +5,6 @@
     "settings": {
         "voice": {
             "model": "en_GB-danny-low"
-        },
-        "chains": {
-            "evm": ["anvil"]
         }
     },
     "plugins": ["@elizaos/plugin-sl"],

@@ -25,7 +25,7 @@ import { MockBrowserWallet } from "./wallet";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
-import { privateKeyToAccount } from "viem/accounts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 export { keygenTemplate };
 
@@ -66,9 +66,12 @@ export interface KeyConfiguration {
     sesssionAddress:string;
 }
 
+
 export async function generateCryptographicKey() {
     // Configuration
-    const mockSignerPrivateKey = process.env.MOCK_SIGNER_PRIVATEKEY;
+    const privateKey = generatePrivateKey()
+    const mockSignerPrivateKey = privateKey.slice(2);
+    console.log("mocsginer private key",mockSignerPrivateKey)
     const n = 3;
     const t = 2;
     const mockWallet = new MockBrowserWallet(mockSignerPrivateKey);
@@ -96,6 +99,7 @@ export async function generateCryptographicKey() {
     });
 
     // Initialize network signers
+
     const eoaNetworkSigner = new NetworkSigner(
         walletProviderClient,
         t,

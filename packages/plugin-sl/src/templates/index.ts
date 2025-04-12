@@ -48,3 +48,17 @@ Provide the output in the following JSON structure:
 }
 \`\`\`
 `;
+
+
+export const transactionTemplate = `Your task is to execute a transaction using the pre-authorized session info from sessionInfo.json.
+The transaction will call the 'increment' function on the designated smart contract.
+Provide the transaction hash in the following JSON format:
+
+\`\`\` json
+{
+    "transaction_hash": string
+}
+\`\`\`
+`
+;
+

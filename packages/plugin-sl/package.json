@@ -22,6 +22,10 @@
         "@elizaos/core": "workspace:*",
         "@elizaos/plugin-tee": "workspace:*",
         "@silencelaboratories/walletprovider-sdk": "0.4.1",
+        "@biconomy/abstractjs": "1.0.1",
+        "@rhinestone/module-sdk": "^0.2.7",
+        "uuid": "^11.0.5",
+        "viem": "^2.23.1",
         "pnpm": "9.14.4",
         "tsup": "8.3.5"
     },

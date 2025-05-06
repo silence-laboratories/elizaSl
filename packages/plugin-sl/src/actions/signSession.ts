@@ -1,97 +1,119 @@
+/* src/actions/transaction.ts
+ *
+ * Eliza-OS action that:
+ *   • receives a natural-language transfer command
+ *   • receives a UUID (`session_id`) that identifies the session-info JSON in the backend DB
+ *   • fetches that JSON over HTTP (`GET /api/session` with x-user-id header)
+ *   • reconstructs MPC signer & Nexus account, then submits the ERC-20 transfer
+ */
+
 import type { IAgentRuntime, Memory, State } from "@elizaos/core";
-import { composeContext, generateObjectDeprecated, ModelClass } from "@elizaos/core";
+import {
+  composeContext,
+  generateObjectDeprecated,
+  ModelClass,
+} from "@elizaos/core";
+
 import {
   createSmartAccountClient,
   toNexusAccount,
   smartSessionActions,
-
 } from "@biconomy/abstractjs";
-import { encodeFunctionData, parseEther, Address, http, parseAbi } from "viem";
+
+import {
+  encodeFunctionData,
+  parseEther,
+  Address,
+  http,
+  parseAbi,
+} from "viem";
 import { baseSepolia } from "viem/chains";
-import { createViemAccount, createSignerFromKeyConfig } from "./sl";
-import { readFileSync } from "fs";
-import path from "path";
+
+import {
+  createViemAccount,
+  createSignerFromKeyConfig,
+} from "./sl";
+
 import { transactionTemplate } from "../templates";
 
-// --- Constants --- //
+/* ---------- constants ---------- */
 const chain = { ...baseSepolia, id: 84532 };
-const ALCHEMY_RPC = "https://base-sepolia.g.alchemy.com/v2/71BtTS_ke_J_XJg8P2LtjAGZuDKOQUJD";
-const BICONOMY_BUNDLER_URL = "https://bundler.biconomy.io/api/v3/84532/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44";
-const ERC20_TOKEN_ADDRESS: Address = "0x03AA93e006fBa956cdBAfa2b8EF789D0Cb63e7b4";
+const ALCHEMY_RPC =
+  "https://base-sepolia.g.alchemy.com/v2/71BtTS_ke_J_XJg8P2LtjAGZuDKOQUJD";
+const BICONOMY_BUNDLER_URL =
+  "https://bundler.biconomy.io/api/v3/84532/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44";
+const ERC20_TOKEN_ADDRESS: Address =
+  "0x03AA93e006fBa956cdBAfa2b8EF789D0Cb63e7b4";
 
-// The path to the downloaded session info file.
-const SESSION_INFO_PATH = path.resolve(
-  "/Users/yogendrasankhla/Downloads/session-info.json"
-);
+/* backend that stores session-info JSON */
+const SESSION_ENDPOINT = "http://localhost:3008/api/session";
 
-/**
- * This helper parses a natural language command into recipient and token amount.
- * It expects a command like: "send 0.1 eth to 0xABC123...DEF".
- */
-function parseTransactionCommand(text: string): { recipient: string; amount: string } | null {
+/* ---------- utils ---------- */
+function parseTransactionCommand(text: string): {
+  recipient: string;
+  amount: string;
+} | null {
   const regex = /send\s+([\d.]+)\s*eth\s+to\s+(0x[a-fA-F0-9]{40})/i;
-  const match = text.match(regex);
-  if (match && match[1] && match[2]) {
-    return { amount: match[1], recipient: match[2] };
-  }
-  return null;
+  const m = text.match(regex);
+  return m ? { amount: m[1], recipient: m[2] } : null;
 }
 
-export class TransactionAction {
-  /**
-   * Reads the downloaded session-info.json file and reinitializes the MPC signer using
-   * the saved key configuration.
-   */
-  private async getMpcSigner(sessionInfo: any) {
-    // Use the saved key configuration to reinitialize the signer.
-    const keyConfig = {
-        ...sessionInfo.keyConfig,
-        ephemeralPrivateKey: sessionInfo.keyConfig.ephemeralPrivateKey.startsWith('0x')
-          ? sessionInfo.keyConfig.ephemeralPrivateKey
-          : `0x${sessionInfo.keyConfig.ephemeralPrivateKey}`,
-      };
+/* ---------- action ---------- */
+class TransactionAction {
+  /** GET /api/session with x-user-id header → JSON object */
+  private async fetchSessionInfo(sessionId: string) {
+    const res = await fetch(SESSION_ENDPOINT, {
+      headers: { "x-user-id": sessionId },
+    });
+    if (!res.ok) throw new Error(await res.text());
 
-    const { networkSigner, keyId, publicKey } = await createSignerFromKeyConfig(keyConfig);
+    /* unwrap new shape, fall back to old */
+    const data = await res.json();
+    return data.sessionInfo ?? data;          // ← ★ THIS LINE
+  }
+
+
+  /** MPC signer from keyConfig */
+  private async getMpcSigner(sessionInfo: any) {
+    const epk = sessionInfo.keyConfig.ephemeralPrivateKey;
+    const keyConfig = {
+      ...sessionInfo.keyConfig,
+      /* prepend 0x if missing */
+      ephemeralPrivateKey: epk.startsWith("0x") ? epk : `0x${epk}`,
+    };
+
+
+    const { networkSigner, keyId, publicKey } =
+      await createSignerFromKeyConfig(keyConfig);
     const mpcSigner = createViemAccount(networkSigner, keyId, publicKey);
-    // Validate that the signer’s address matches what we saved in sessionDetails.
-    if (mpcSigner.address.toLowerCase() !== sessionInfo.keyConfig.sessionAddress.toLowerCase()) {
-        throw new Error("MPC signer configuration mismatch with session info");
-      }
+
+    if (
+      mpcSigner.address.toLowerCase() !==
+      sessionInfo.keyConfig.sessionAddress.toLowerCase()
+    ) {
+      throw new Error("MPC signer address mismatch with session info");
+    }
     return mpcSigner;
   }
 
-  /**
-   * Reads session-info.json, reconstructs the MPC signer and Nexus account, parses the natural language
-   * command from the message text (if not provided via _options), and executes the ERC20 transfer.
-   * Returns the user operation hash.
-   *
-   * @param commandText - The full command text (e.g., "send 0.1 eth to 0xABC123...DEF")
-   */
-  async executeTransaction(commandText: string): Promise<string> {
-    // Read session info from disk.
-    let rawSessionData: string;
-    try {
-      rawSessionData = readFileSync(SESSION_INFO_PATH, "utf-8");
-    } catch (error) {
-      console.error("Error reading session info file:", error);
-      throw new Error("Session info file not found. Please ensure sessionInfo.json is available.");
-    }
-    // Parse the session info; using JSON.parse here (if needed, you may use parse() from abstractjs)
-    const sessionInfo = JSON.parse(rawSessionData);
-    console.log("Session info loaded:", sessionInfo);
+  /** full flow: fetch JSON, rebuild signer, submit ERC-20 transfer */
+  async executeTransaction(commandText: string, sessionId: string) {
+    /* 1️⃣ fetch session-info */
+    const sessionInfo = await this.fetchSessionInfo(sessionId);
+    console.log("Session fetched:", sessionInfo);
 
-    // Reinitialize the MPC signer using the saved key configuration.
+    /* 2️⃣ rebuild MPC signer */
     const mpcSigner = await this.getMpcSigner(sessionInfo);
 
-    // Parse the command text to extract recipient and amount.
+    /* 3️⃣ parse natural-language command */
     const parsed = parseTransactionCommand(commandText);
-    if (!parsed) {
-      throw new Error("Unable to parse transaction command. Please use the format: 'send 0.1 eth to 0xABC123...DEF'");
-    }
+    if (!parsed)
+      throw new Error(
+        "Parse error. Use: 'send 0.1 eth to 0xABC123...'",
+      );
     const { recipient, amount } = parsed;
-    console.log("Parsed command:", { recipient, amount });
 
-    // Create an emulated account using the saved Nexus account address from session info.
+    /* 4️⃣ emulated Nexus account */
     const emulatedAccount = await toNexusAccount({
       accountAddress: sessionInfo.nexusAccountAddress,
       signer: mpcSigner,
@@ -99,13 +121,13 @@ export class TransactionAction {
       transport: http(ALCHEMY_RPC),
     });
 
-    // Create the smart account client.
+    /* 5️⃣ client */
     const nexusClient = createSmartAccountClient({
       account: emulatedAccount,
       transport: http(BICONOMY_BUNDLER_URL),
     });
 
-    // Prepare the ERC20 transfer call data.
+    /* 6️⃣ call data for ERC20 transfer */
     const data = encodeFunctionData({
       abi: parseAbi([
         "function transfer(address to, uint256 amount) returns (bool)",
@@ -114,92 +136,93 @@ export class TransactionAction {
       args: [recipient as Address, parseEther(amount)],
     });
 
-    // Extend the client with smart session actions.
     const smartSessionsClient = nexusClient.extend(smartSessionActions());
 
-    // Execute the transaction using the pre-authorized session details.
+    /* 7️⃣ use pre-authorised session */
     const userOpHash = await smartSessionsClient.usePermission({
       sessionDetails: sessionInfo.sessionDetails,
-      calls: [
-        {
-          to: ERC20_TOKEN_ADDRESS,
-          data,
-        },
-      ],
+      calls: [{ to: ERC20_TOKEN_ADDRESS, data }],
       mode: "ENABLE_AND_USE",
     });
 
-    // Wait for the operation receipt and verify success.
-    const receipt = await nexusClient.waitForUserOperationReceipt({ hash: userOpHash });
+    const receipt = await nexusClient.waitForUserOperationReceipt({
+      hash: userOpHash,
+    });
     if (!receipt.success) throw new Error("Transfer failed");
 
     return userOpHash;
   }
 }
 
+/* ---------- exported Eliza action ---------- */
 export const transactionAction = {
   name: "executeTransaction",
-  description: "Execute an ERC20 transfer using pre-authorized session info parsed from command text.",
+  description:
+    "Execute an ERC-20 transfer via pre-authorised smart session.",
   handler: async (
     runtime: IAgentRuntime,
     _message: Memory,
     state: State,
     _options: any,
-    callback?: any
+    callback?: any,
   ) => {
-    console.log("Transaction action handler initiated");
+    /* pull natural-language command */
+    /* pull natural-language command */
+    let commandText =
+    _options?.text ??
+    (_message?.content?.text as string | undefined);
+    if (!commandText) throw new Error("Missing command text.");
 
-    // Compose context for additional runtime parameters if needed.
-    const transactionContext = composeContext({
-      state,
-      template: transactionTemplate,
-    });
+    /* ✂️ grab session_id prefix  [sid:UUID] */
+    let sessionId =
+    _options?.session_id ??
+    (_message?.content?.session_id as string | undefined);
+    const sidMatch = commandText.match(/\[sid:([0-9a-fA-F-]{36})]/);
+    if (!sessionId && sidMatch) {
+    sessionId = sidMatch[1];
+    commandText = commandText.replace(sidMatch[0], "").trim();  // remove tag
+    }
+    if (!sessionId) throw new Error("Missing session_id (UUID).");
+
+
+    /* (optional) compose context for LLM prompt */
+    const ctx = composeContext({ state, template: transactionTemplate });
     await generateObjectDeprecated({
       runtime,
-      context: transactionContext,
+      context: ctx,
       modelClass: ModelClass.SMALL,
     });
 
     try {
-      // Use the natural language command text from the message.
-      // For Eliza OS, the command is typically provided within _message.content.text.
-      let commandText = _options?.text;
-      if (!commandText && _message && _message.content && typeof _message.content.text === "string") {
-        commandText = _message.content.text;
-      }
-
-      if (!commandText) {
-        throw new Error("No transaction command text provided.");
-      }
-
       const action = new TransactionAction();
-      const txHash = await action.executeTransaction(commandText);
+      const txHash = await action.executeTransaction(
+        commandText,
+        sessionId,
+      );
 
       callback?.({
-        text: ` 🚀 Transaction executed successfully!\n🔗 Transaction Hash: ${txHash}`,
-        content: {
-          success: true,
-          transaction_hash: txHash,
-        },
+        text: `🚀 Transaction sent!\n🔗 Hash: ${txHash}`,
+        content: { success: true, transaction_hash: txHash },
       });
       return true;
-    } catch (error: any) {
-      console.error("Transaction execution failed:", error);
+    } catch (e: any) {
+      console.error(e);
       callback?.({
-        text: ` ❌ Transaction execution failed: ${error.message}`,
+        text: `❌ Transaction failed: ${e.message}`,
+        content: { success: false },
       });
       return false;
     }
   },
   template: transactionTemplate,
-  validate: async (_runtime: IAgentRuntime) => true,
+  validate: async () => true,
   examples: [
     [
       {
         user: "user",
         content: {
-          text: "send 0.1 eth to 0xABC123DEF4567890ABC123DEF4567890ABC123DE", // Example command text
-          action: "EXECUTE_TRANSACTION",
+          text: "send 0.1 eth to 0xABC123DEF4567890ABC123DEF4567890ABC123DE",
+          session_id: "550e8402-e48b-42d4-a716-446655440000",
         },
       },
     ],

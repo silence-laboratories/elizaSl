@@ -46,7 +46,7 @@ const ERC20_TOKEN_ADDRESS: Address =
   "0x03AA93e006fBa956cdBAfa2b8EF789D0Cb63e7b4";
 
 /* backend that stores session-info JSON */
-const SESSION_ENDPOINT = "http://localhost:3008/api/session";
+const SESSION_ENDPOINT = "https://sessionstoreservice.demo.silencelaboratories.com/api/session";
 
 /* ---------- utils ---------- */
 function parseTransactionCommand(text: string): {

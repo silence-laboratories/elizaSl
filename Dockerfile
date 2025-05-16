@@ -51,5 +51,15 @@ COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/characters ./characters
 
-# Set the command to run the application
-CMD ["pnpm", "start"]
+# Create a shell script to handle environment variables and start the application
+RUN echo '#!/bin/sh\n\
+if [ -z "$GROK_API_KEY" ]; then\n\
+    echo "Error: GROK_API_KEY environment variable is required"\n\
+    exit 1\n\
+fi\n\
+\n\
+export GROK_API_KEY="$GROK_API_KEY"\n\
+pnpm start --character="characters/dobby.character.json"' > /app/start.sh && chmod +x /app/start.sh
+
+# Set the command to run the shell script
+CMD ["/app/start.sh"]

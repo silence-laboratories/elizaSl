@@ -13,7 +13,8 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Set the working directory
 WORKDIR /app
-
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
 # Copy package.json and other configuration files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json ./
 
@@ -30,7 +31,8 @@ RUN pnpm install \
 
 # Create a new stage for the final image
 FROM node:23.3.0-slim
-
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
 # Install runtime dependencies if needed
 RUN npm install -g pnpm@9.4.0 && \
     apt-get update && \

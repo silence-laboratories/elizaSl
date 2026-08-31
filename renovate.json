@@ -1,10 +1,21 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "extends": ["config:base"],
+    "extends": [
+        "config:base"
+    ],
     "packageRules": [
         {
+            "matchPackagePatterns": [
+                "*"
+            ],
+            "minimumReleaseAge": "7 days"
+        },
+        {
             "groupName": "Discord.js ecosystem",
-            "matchPackagePatterns": ["^@discordjs/", "^discord.js"]
+            "matchPackagePatterns": [
+                "^@discordjs/",
+                "^discord.js"
+            ]
         },
         {
             "groupName": "TypeScript and related",
@@ -17,15 +28,24 @@
         },
         {
             "groupName": "Testing frameworks",
-            "matchPackagePatterns": ["^jest$", "^@types/jest$"]
+            "matchPackagePatterns": [
+                "^jest$",
+                "^@types/jest$"
+            ]
         },
         {
             "groupName": "Rollup and plugins",
-            "matchPackagePatterns": ["^@rollup/", "^rollup"]
+            "matchPackagePatterns": [
+                "^@rollup/",
+                "^rollup"
+            ]
         },
         {
             "groupName": "ESLint and formatting",
-            "matchPackagePatterns": ["^eslint", "^prettier"]
+            "matchPackagePatterns": [
+                "^eslint",
+                "^prettier"
+            ]
         },
         {
             "groupName": "SQLite related",
@@ -56,14 +76,19 @@
         },
         {
             "groupName": "Solana packages",
-            "matchPackagePatterns": ["^@solana/"]
+            "matchPackagePatterns": [
+                "^@solana/"
+            ]
         }
     ],
     "timezone": "UTC",
-    "schedule": ["every weekend"],
+    "schedule": [
+        "every weekend"
+    ],
     "prHourlyLimit": 2,
     "prConcurrentLimit": 10,
     "rangeStrategy": "pin",
     "separateMajorMinor": true,
-    "dependencyDashboard": true
+    "dependencyDashboard": true,
+    "minimumReleaseAge": "7 days"
 }
